@@ -1,5 +1,5 @@
 import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 import os
 
 if not {'TOKEN', 'CHANNEL', 'ADMIN'} <= set(os.environ):
@@ -20,13 +20,15 @@ user_states = {}
 pending_messages = {}
 
 @bot.message_handler(commands=['start'])
-def start_command(message):
+def start_command(message: Message):
+    if message.chat.type == 'group': return
     chat_id = message.chat.id
     user_states[chat_id] = {'step': 1}
     bot.send_message(chat_id, "Привет! Отправь мне ЦУтату, которую хочешь опубликовать.")
 
 @bot.message_handler(commands=['cancel'])
 def cancel_command(message):
+    if message.chat.type == 'group': return
     chat_id = message.chat.id
     user_states.pop(chat_id, None)
     pending_messages.pop(chat_id, None)
@@ -34,6 +36,7 @@ def cancel_command(message):
 
 @bot.message_handler(func=lambda message: True)
 def handle_messages(message):
+    if message.chat.type == 'group': return
     chat_id = message.chat.id
 
     if chat_id not in user_states:
