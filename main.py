@@ -36,9 +36,12 @@ def cancel_command(message):
     bot.send_message(chat_id, "Операция отменена.")
 
 @bot.message_handler(func=lambda message: True)
-def handle_messages(message):
+def handle_messages(message: Message):
     if message.chat.type == 'group': return
     chat_id = message.chat.id
+
+    if not message.text:
+        bot.send_message(chat_id, "Поддерживаются только текстовые ЦУтаты.")
 
     if chat_id not in user_states:
         bot.send_message(chat_id, "Ой! Похоже, ты пытаешься стать Александром Шаховым! Начни с команды /start")
@@ -53,7 +56,7 @@ def handle_messages(message):
         bot.send_message(chat_id, "Теперь отправь имя автора ЦУтаты.")
     elif step == 2:
         quote = user_states[chat_id]['quote']
-        author = message.text
+        author = message.text.removeprefix('#')
         pending_messages[chat_id] = f'"{quote}"\n— #{author}'
 
         markup = InlineKeyboardMarkup()
