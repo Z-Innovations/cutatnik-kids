@@ -1,12 +1,11 @@
 import telebot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
+from telebot.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message
 import os
 
 if not {'TOKEN', 'CHANNEL', 'ADMIN'} <= set(os.environ):
     print("Token, channel or adminis missing")
 
 TOKEN = os.environ.get('TOKEN') or ''
-bot = telebot.TeleBot(TOKEN)
 
 CHANNEL_ID = os.environ.get('CHANNEL') or ''
 try: CHANNEL_ID = int(CHANNEL_ID)
@@ -15,6 +14,8 @@ except: CHANNEL_ID = '@'+CHANNEL_ID
 ADMIN_ID = os.environ.get('ADMIN') or ''
 try: ADMIN_ID = int(ADMIN_ID)
 except: ADMIN_ID = '@'+ADMIN_ID
+
+bot = telebot.TeleBot(TOKEN, parse_mode='markdown')
 
 user_states = {}
 pending_messages = {}
@@ -67,8 +68,8 @@ def handle_messages(message):
         del user_states[chat_id]
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("accept_") or call.data.startswith("reject_"))
-def callback_handler(call):
-    data = call.data
+def callback_handler(call: CallbackQuery):
+    data = call.data or ''
 
     try:
         user_id = int(data.split("_")[1])
@@ -78,15 +79,19 @@ def callback_handler(call):
 
     if user_id in pending_messages:
         final_message = pending_messages.pop(user_id)
+        result = '<неизвестно>'
         if data.startswith("accept_"):
             bot.send_message(CHANNEL_ID, final_message)
             bot.answer_callback_query(call.id, "Сообщение принято и отправлено в канал.")
             bot.send_message(user_id, "Твоя ЦУтата принята и опубликована!")
+            result = 'принята'
         elif data.startswith("reject_"):
             bot.answer_callback_query(call.id, "ЦУтата отклонена.")
             bot.send_message(user_id, "Твоя ЦУтата была отклонена.")
+            result = 'отклонена'
+        bot.edit_message_reply_markup(call.message.chat.id, call.message.id)
+        bot.edit_message_text((call.message.text or '')+f'\n\n_ЦУтата была {result}._', call.message.chat.id, call.message.id)
     else:
         bot.answer_callback_query(call.id, "ЦУтата не найдена или уже обработана.")
 
 bot.polling()
-
