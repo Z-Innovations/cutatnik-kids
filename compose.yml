@@ -1,0 +1,6 @@
+services:
+  cutatnik:
+    build: .
+    container_name: cutatnik
+    env_file: secrets.env
+    restart: always
