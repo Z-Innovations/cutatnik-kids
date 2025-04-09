@@ -2,18 +2,27 @@ import telebot
 from telebot.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message
 import os
 
-if not {'TOKEN', 'CHANNEL', 'ADMIN'} <= set(os.environ):
-    print("Token, channel or adminis missing")
+REQUIRED_ENV = {'TOKEN', 'CHANNEL', 'ADMIN'}
+# Not required: BOT_USERNAME
+if not REQUIRED_ENV <= set(os.environ):
+    raise RuntimeError("Some of these environment variables are missing: "+', '.join(REQUIRED_ENV))
 
 TOKEN = os.environ.get('TOKEN') or ''
 
 CHANNEL_ID = os.environ.get('CHANNEL') or ''
 try: CHANNEL_ID = int(CHANNEL_ID)
-except: CHANNEL_ID = '@'+CHANNEL_ID
+except: CHANNEL_ID = CHANNEL_ID if CHANNEL_ID.startswith('@') else '@'+CHANNEL_ID
 
 ADMIN_ID = os.environ.get('ADMIN') or ''
 try: ADMIN_ID = int(ADMIN_ID)
-except: ADMIN_ID = '@'+ADMIN_ID
+except: ADMIN_ID = ADMIN_ID if ADMIN_ID.startswith('@') else '@'+ADMIN_ID
+
+BOT_USERNAME_NOTICE = None
+if 'BOT_USERNAME' in os.environ:
+    user = os.environ['BOT_USERNAME']
+    user = user if user.startswith('@') else '@'+user
+    BOT_USERNAME_NOTICE = f"Отправить свою ЦУтату можно в боте {user}"
+    del user
 
 bot = telebot.TeleBot(TOKEN, parse_mode='markdown')
 
@@ -34,6 +43,27 @@ def cancel_command(message):
     user_states.pop(chat_id, None)
     pending_messages.pop(chat_id, None)
     bot.send_message(chat_id, "Операция отменена.")
+
+@bot.message_handler(commands=['help'])
+def help(m: Message):
+    notices = ["Привет! Это бот для отправки ЦУтат."]
+    if m.chat.type == 'private':
+        notices.append("Для отправки используй команду /start")
+        notices.append('''Поддерживаемые форматы автора:
+- Автор1
+- #Автор1
+- Автор1 #Автор2
+- #Автор1 #Автор2''')
+    if m.chat.id == ADMIN_ID:
+        if m.chat.type == 'private':
+            notices.append("Ты являешься админом. Когда пользователь отправит ЦУтату, тебе нужно будет одобрить или отклонить её.")
+        else:
+            notices.append("Эта группа админов. Когда пользователь отправит ЦУтату, кому-то из её участников нужно будет одобрить или отклонить её.")
+        if BOT_USERNAME_NOTICE:
+            notices.append(BOT_USERNAME_NOTICE)
+    elif m.chat.type in ('group', 'supergroup', 'channel'):
+        return
+    bot.send_message(m.chat.id, '\n\n'.join(notices))
 
 @bot.message_handler(func=lambda message: True)
 def handle_messages(message: Message):
