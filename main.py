@@ -1,5 +1,5 @@
 import telebot
-from telebot.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, Message
+from telebot.types import CallbackQuery, Chat, InlineKeyboardMarkup, InlineKeyboardButton, Message, User
 import os
 
 REQUIRED_ENV = {'TOKEN', 'CHANNEL', 'ADMIN'}
@@ -28,6 +28,9 @@ bot = telebot.TeleBot(TOKEN, parse_mode='markdown')
 
 user_states = {}
 pending_messages = {}
+
+def format_username(user: Chat | User):
+    return f'@{user.username} ({user.id})' if user.username else str(user.id)
 
 @bot.message_handler(commands=['start'])
 def start_command(message: Message):
@@ -96,7 +99,7 @@ def handle_messages(message: Message):
             InlineKeyboardButton("Отклонить", callback_data=f"reject_{chat_id}")
         )
         
-        bot.send_message(ADMIN_ID, f"Новая цитата от пользователя @{message.chat.username or '<no username>'} ({chat_id}):\n\n{pending_messages[chat_id]}", reply_markup=markup)
+        bot.send_message(ADMIN_ID, f"Новая цитата от пользователя {format_username(message.chat)}:\n\n{pending_messages[chat_id]}", reply_markup=markup)
         bot.send_message(chat_id, "Ваше сообщение отправлено на проверку администратору!")
 
         del user_states[chat_id]
@@ -124,7 +127,7 @@ def callback_handler(call: CallbackQuery):
             bot.send_message(user_id, "Твоя ЦУтата была отклонена.")
             result = 'отклонена'
         bot.edit_message_reply_markup(call.message.chat.id, call.message.id)
-        bot.edit_message_text((call.message.text or '')+f'\n\n_ЦУтата была {result}._', call.message.chat.id, call.message.id)
+        bot.edit_message_text((call.message.text or '')+f'\n\n_ЦУтата была {result} пользователем {format_username(call.from_user)}._', call.message.chat.id, call.message.id)
     else:
         bot.answer_callback_query(call.id, "ЦУтата не найдена или уже обработана.")
 
