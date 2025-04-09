@@ -29,7 +29,7 @@ def start_command(message: Message):
 
 @bot.message_handler(commands=['cancel'])
 def cancel_command(message):
-    if message.chat.type == 'group': return
+    if message.chat.type in ('group', 'supergroup', 'channel'): return
     chat_id = message.chat.id
     user_states.pop(chat_id, None)
     pending_messages.pop(chat_id, None)
